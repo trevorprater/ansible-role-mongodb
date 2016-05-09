@@ -1,0 +1,7 @@
+FROM debian:7
+
+# Install python 2.x
+RUN apt-get update && apt-get install -y python adduser
+
+# pepare for takeoff
+CMD ["/sbin/init"]

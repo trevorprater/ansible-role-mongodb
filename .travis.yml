@@ -27,6 +27,18 @@ env:
     DISTRIBUTION=ubuntu-upstart
     DIST_VERSION=12.04-builded
     MONGODB_VERSION=2.6
+  - >
+    DISTRIBUTION=debian
+    DIST_VERSION=7-builded
+    MONGODB_VERSION=3.2
+  - >
+    DISTRIBUTION=debian
+    DIST_VERSION=7-builded
+    MONGODB_VERSION=3.0
+  - >
+    DISTRIBUTION=debian
+    DIST_VERSION=7-builded
+    MONGODB_VERSION=2.6
 
 services:
   - docker
