@@ -1,24 +1,3 @@
-#!/usr/bin/python
-
-# (c) 2012, Elliott Foster <elliott@fourkitchens.com>
-# Sponsored by Four Kitchens http://fourkitchens.com.
-# (c) 2014, Epic Games, Inc.
-#
-# This file is part of Ansible
-#
-# Ansible is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Ansible is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-
 DOCUMENTATION = '''
 ---
 module: mongodb_user
@@ -144,7 +123,7 @@ EXAMPLES = '''
 
 '''
 
-import ConfigParser
+import configparser
 from distutils.version import LooseVersion
 try:
     from pymongo.errors import ConnectionFailure
@@ -192,7 +171,7 @@ def user_add(module, client, db_name, user, password, roles):
     else:
         try:
             db.add_user(user, password, None, roles=roles)
-        except OperationFailure, e:
+        except OperationFailure as e:
             err_msg = str(e)
             module.fail_json(msg=err_msg)
 
@@ -207,7 +186,7 @@ def user_remove(module, client, db_name, user):
         module.exit_json(changed=False, user=user)
 
 def load_mongocnf():
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     mongocnf = os.path.expanduser('~/.mongodb.cnf')
 
     try:
@@ -216,7 +195,7 @@ def load_mongocnf():
           user=config.get('client', 'user'),
           password=config.get('client', 'pass')
         )
-    except (ConfigParser.NoOptionError, IOError):
+    except (configparser.NoOptionError, IOError):
         return False
 
     return creds
@@ -322,7 +301,7 @@ def main():
                 module.fail_json(msg='The localhost login exception only allows the first admin account to be created')
             #else: this has to be the first admin user added
 
-    except ConnectionFailure, e:
+    except ConnectionFailure as e:
         module.fail_json(msg='unable to connect to database: %s' % str(e))
 
     check_compatibility(module, client)
@@ -342,7 +321,7 @@ def main():
 
         try:
             user_add(module, client, db_name, user, password, roles)
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to add or update user: %s' % str(e))
 
             # Here we can  check password change if mongo provide a query for that : https://jira.mongodb.org/browse/SERVER-22848
@@ -353,7 +332,7 @@ def main():
     elif state == 'absent':
         try:
             user_remove(module, client, db_name, user)
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to remove user: %s' % str(e))
 
     module.exit_json(changed=True, user=user)

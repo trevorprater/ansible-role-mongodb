@@ -1,22 +1,5 @@
 #!/usr/bin/python
 
-# (c) 2015-2016, Sergei Antipov, 2GIS LLC
-#
-# This file is part of Ansible
-#
-# Ansible is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Ansible is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-
 DOCUMENTATION = '''
 ---
 module: mongodb_replication
@@ -145,7 +128,7 @@ host_type:
   type: string
   sample: "replica"
 '''
-import ConfigParser
+import configparser
 import time
 from distutils.version import LooseVersion
 try:
@@ -236,7 +219,7 @@ def add_host(module, client, host_name, host_port, host_type, timeout=180, **kwa
             cfg['members'].append(new_host)
             admin_db.command('replSetReconfig', cfg)
             return
-        except (OperationFailure, AutoReconnect), e:
+        except (OperationFailure, AutoReconnect) as e:
             timeout = timeout - 5
             if timeout <= 0:
                 module.fail_json(msg='reached timeout while waiting for rs.reconfig(): %s' % str(e))
@@ -265,14 +248,14 @@ def remove_host(module, client, host_name, timeout=180):
                 else:
                     fail_msg = "couldn't find member with hostname: {0} in replica set members list".format(host_name)
                     module.fail_json(msg=fail_msg)
-        except (OperationFailure, AutoReconnect), e:
+        except (OperationFailure, AutoReconnect) as e:
             timeout = timeout - 5
             if timeout <= 0:
                 module.fail_json(msg='reached timeout while waiting for rs.reconfig(): %s' % str(e))
             time.sleep(5)
 
 def load_mongocnf():
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     mongocnf = os.path.expanduser('~/.mongodb.cnf')
 
     try:
@@ -281,7 +264,7 @@ def load_mongocnf():
           user=config.get('client', 'user'),
           password=config.get('client', 'pass')
         )
-    except (ConfigParser.NoOptionError, IOError):
+    except (configparser.NoOptionError, IOError):
         return False
 
     return creds
@@ -298,7 +281,7 @@ def wait_for_ok_and_master(module, client, timeout = 60):
 
         time.sleep(1)
 
-def authenticate(client, login_user, login_password):
+def authenticate(module, client, login_user, login_password):
     if login_user is None and login_password is None:
         mongocnf_creds = load_mongocnf()
         if mongocnf_creds is not False:
@@ -359,13 +342,13 @@ def main():
             client = MongoClient(login_host, int(login_port), replicaSet=replica_set,
                                  ssl=ssl, serverSelectionTimeoutMS=5000)
 
-        authenticate(client, login_user, login_password)
+        authenticate(module, client, login_user, login_password)
         client['admin'].command('replSetGetStatus')
 
     except ServerSelectionTimeoutError:
         try:
             client = MongoClient(login_host, int(login_port), ssl=ssl)
-            authenticate(client, login_user, login_password)
+            authenticate(module, client, login_user, login_password)
             if state == 'present':
                 new_host = { '_id': 0, 'host': "{0}:{1}".format(host_name, host_port) }
                 if priority != 1.0: new_host['priority'] = priority
@@ -374,9 +357,9 @@ def main():
                 wait_for_ok_and_master(module, client)
                 replica_set_created = True
                 module.exit_json(changed=True, host_name=host_name, host_port=host_port, host_type=host_type)
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to initiate replica set: %s' % str(e))
-    except ConnectionFailure, e:
+    except ConnectionFailure as e:
         module.fail_json(msg='unable to connect to database: %s' % str(e))
 
     check_compatibility(module, client)
@@ -394,13 +377,13 @@ def main():
                         priority        = float(module.params['priority']),
                         slave_delay     = module.params['slave_delay'],
                         votes           = module.params['votes'])
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to add new member to replica set: %s' % str(e))
 
     elif state == 'absent':
         try:
             remove_host(module, client, host_name)
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to remove member of replica set: %s' % str(e))
 
     module.exit_json(changed=True, host_name=host_name, host_port=host_port, host_type=host_type)
